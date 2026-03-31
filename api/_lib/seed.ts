@@ -1,4 +1,4 @@
-import * as bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 import { SEGMENTS } from "./seed-data";
 import { SEGMENT_TOOLS, SEGMENT_BUDGET_CONFIGS } from "./seed-tools-budget";

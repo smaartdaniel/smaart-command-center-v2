@@ -35,15 +35,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Test 5: schema import
     try {
-      const schema = await import("../shared/schema");
+      const schema = await import("./_lib/schema.js");
       tests.schema = `ok: tables=${Object.keys(schema).filter(k => !k.startsWith("insert") && !k.startsWith("_")).length}`;
     } catch (e: any) {
       tests.schema = `error: ${e.message}`;
     }
 
-    // Test 6: storage
+    // Test 6: db import
     try {
-      const { storage } = await import("./_lib/storage");
+      const { db } = await import("./_lib/db.js");
+      tests.db = `ok: ${typeof db}`;
+    } catch (e: any) {
+      tests.db = `error: ${e.message}`;
+    }
+
+    // Test 7: storage
+    try {
+      const { storage } = await import("./_lib/storage.js");
       const segments = await storage.getSegments();
       tests.storage = `ok: ${segments.length} segments`;
     } catch (e: any) {

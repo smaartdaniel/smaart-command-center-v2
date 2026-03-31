@@ -1,4 +1,4 @@
-import * as jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { storage } from "./storage";
 
 const JWT_SECRET = process.env.JWT_SECRET || "smaart-secret-key";
