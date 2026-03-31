@@ -212,7 +212,8 @@ function ConnectPlatformDialog({
       if (!platform) return;
       await apiRequest("POST", "/api/connectors", {
         platform: platform.key,
-        credentials,
+        display_name: platform.name,
+        credentials: JSON.stringify(credentials),
       });
     },
     onSuccess: () => {
