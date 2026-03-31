@@ -9,7 +9,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { email, password } = req.body;
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const { email, password } = body;
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
     }
