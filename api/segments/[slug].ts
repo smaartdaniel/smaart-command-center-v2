@@ -9,7 +9,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ message: "Not authenticated" });
   }
 
-  const { param } = req.query;
+  const { slug: param } = req.query;
   const paramStr = Array.isArray(param) ? param[0] : param;
 
   if (!paramStr) {
