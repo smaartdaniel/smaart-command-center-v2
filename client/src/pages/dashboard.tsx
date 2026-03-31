@@ -226,20 +226,10 @@ export default function Dashboard() {
 
   const { data: stats, isLoading: statsLoading } = useQuery<Stats>({
     queryKey: ["/api/stats"],
-    queryFn: async () => {
-      const res = await fetch("/api/stats");
-      if (!res.ok) throw new Error("Failed to load stats");
-      return res.json();
-    },
   });
 
   const { data: segments, isLoading: segLoading } = useQuery<SegmentWithCount[]>({
     queryKey: ["/api/segments"],
-    queryFn: async () => {
-      const res = await fetch("/api/segments");
-      if (!res.ok) throw new Error("Failed to load segments");
-      return res.json();
-    },
   });
 
   const filtered = searchQuery

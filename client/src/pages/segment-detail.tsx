@@ -756,11 +756,6 @@ export default function SegmentDetailPage() {
 
   const { data: segment, isLoading, error } = useQuery<SegmentDetail>({
     queryKey: ["/api/segments", params.slug],
-    queryFn: async () => {
-      const res = await fetch(`/api/segments/${params.slug}`);
-      if (!res.ok) throw new Error(`Failed to load segment: ${res.status}`);
-      return res.json();
-    },
     enabled: !!params.slug,
   });
 

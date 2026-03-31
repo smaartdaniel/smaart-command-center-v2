@@ -46,11 +46,6 @@ export function AppSidebar() {
   const { user, logout } = useAuth();
   const { data: segmentsList } = useQuery<SegmentWithCount[]>({
     queryKey: ["/api/segments"],
-    queryFn: async () => {
-      const res = await fetch("/api/segments");
-      if (!res.ok) throw new Error("Failed to load segments");
-      return res.json();
-    },
   });
 
   const strategies = segmentsList?.filter(s => s.category === "strategy") || [];

@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, getToken } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -78,7 +78,9 @@ function CreativeAuditTool() {
   const { data: savedScore } = useQuery<any>({
     queryKey: ["/api/creative-scores/latest"],
     queryFn: async () => {
-      const res = await fetch("/api/creative-scores/latest");
+      const res = await fetch("/api/creative-scores/latest", {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
       if (!res.ok) return null;
       return res.json();
     },
@@ -281,11 +283,6 @@ function AdTemplatePreviews() {
 export default function CreativePlaybookPage() {
   const { data: segment, isLoading } = useQuery<SegmentDetail>({
     queryKey: ["/api/segments", "creative-playbook"],
-    queryFn: async () => {
-      const res = await fetch("/api/segments/creative-playbook");
-      if (!res.ok) throw new Error("Failed to load creative playbook");
-      return res.json();
-    },
   });
 
   if (isLoading) {
