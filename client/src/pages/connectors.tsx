@@ -63,12 +63,20 @@ type PlatformKey = (typeof PLATFORMS)[number]["key"];
 
 const PLATFORM_FIELDS: Record<PlatformKey, { label: string; key: string; placeholder: string }[]> = {
   ghl: [{ label: "API Key", key: "apiKey", placeholder: "Enter GoHighLevel API key" }],
-  ga4: [{ label: "API Key or OAuth Token", key: "apiKey", placeholder: "Enter Google API key or OAuth token" }],
+  ga4: [
+    { label: "Measurement ID", key: "measurementId", placeholder: "G-XXXXXXXXXX" },
+    { label: "Property ID", key: "propertyId", placeholder: "123456789" },
+    { label: "API Key or OAuth Token (optional)", key: "apiKey", placeholder: "For pulling live analytics data" },
+  ],
   google_ads: [{ label: "API Key or OAuth Token", key: "apiKey", placeholder: "Enter Google Ads API key" }],
-  gtm: [{ label: "API Key or OAuth Token", key: "apiKey", placeholder: "Enter GTM API key" }],
+  gtm: [
+    { label: "Container ID", key: "containerId", placeholder: "GTM-XXXXXXX" },
+    { label: "API Key or OAuth Token (optional)", key: "apiKey", placeholder: "Enter GTM API key for remote management" },
+  ],
   meta_ads: [
-    { label: "Access Token", key: "accessToken", placeholder: "Enter Meta access token" },
-    { label: "Pixel ID", key: "pixelId", placeholder: "Enter Pixel ID" },
+    { label: "Pixel ID", key: "pixelId", placeholder: "Enter Meta Pixel ID" },
+    { label: "Ad Account ID (optional)", key: "adAccountId", placeholder: "act_XXXXXXXXX" },
+    { label: "Access Token (optional)", key: "accessToken", placeholder: "For pulling ad performance data" },
   ],
   linkedin_ads: [{ label: "Access Token", key: "accessToken", placeholder: "Enter LinkedIn access token" }],
   x_ads: [{ label: "Access Token", key: "accessToken", placeholder: "Enter X access token" }],
@@ -253,7 +261,7 @@ function ConnectPlatformDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button
             onClick={() => mutation.mutate()}
-            disabled={fields.some(f => !credentials[f.key]) || mutation.isPending}
+            disabled={fields.filter(f => !f.label.includes("optional")).some(f => !credentials[f.key]) || mutation.isPending}
           >
             {mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Connect
