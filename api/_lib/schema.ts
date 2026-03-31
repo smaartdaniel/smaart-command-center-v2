@@ -106,3 +106,51 @@ export const users = pgTable("users", {
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export const websites = pgTable("websites", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  division: text("division").notNull().default("default"),
+  gtmContainerId: text("gtm_container_id"),
+  ga4PropertyId: text("ga4_property_id"),
+  ga4MeasurementId: text("ga4_measurement_id"),
+  environment: text("environment").default("production"),
+  status: text("status").default("active"),
+  lastHealthCheck: text("last_health_check"),
+  createdAt: text("created_at"),
+});
+
+export const connectors = pgTable("connectors", {
+  id: serial("id").primaryKey(),
+  websiteId: integer("website_id"),
+  platform: text("platform").notNull(),
+  displayName: text("display_name").notNull(),
+  authType: text("auth_type").notNull().default("api_key"),
+  credentials: text("credentials"),
+  config: text("config"),
+  status: text("status").default("disconnected"),
+  lastSync: text("last_sync"),
+  errorMessage: text("error_message"),
+  createdAt: text("created_at"),
+});
+
+export const connectorLogs = pgTable("connector_logs", {
+  id: serial("id").primaryKey(),
+  connectorId: integer("connector_id").notNull(),
+  action: text("action").notNull(),
+  status: text("status").notNull(),
+  details: text("details"),
+  createdAt: text("created_at"),
+});
+
+export const insertWebsiteSchema = createInsertSchema(websites).omit({ id: true, createdAt: true });
+export const insertConnectorSchema = createInsertSchema(connectors).omit({ id: true, createdAt: true });
+export const insertConnectorLogSchema = createInsertSchema(connectorLogs).omit({ id: true, createdAt: true });
+
+export type Website = typeof websites.$inferSelect;
+export type InsertWebsite = z.infer<typeof insertWebsiteSchema>;
+export type Connector = typeof connectors.$inferSelect;
+export type InsertConnector = z.infer<typeof insertConnectorSchema>;
+export type ConnectorLog = typeof connectorLogs.$inferSelect;
+export type InsertConnectorLog = z.infer<typeof insertConnectorLogSchema>;

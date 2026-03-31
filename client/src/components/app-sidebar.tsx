@@ -16,7 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   LayoutDashboard, Database, Smartphone, MapPin, Layout, Tv, Search,
   BookOpen, Handshake, Mail, Activity, BarChart3, Paintbrush, Crosshair,
-  ChevronDown, Twitter, ExternalLink, LogOut,
+  ChevronDown, Twitter, ExternalLink, LogOut, Plug,
 } from "lucide-react";
 import type { Segment } from "@shared/schema";
 import { useAuth } from "@/App";
@@ -159,6 +159,28 @@ export function AppSidebar() {
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
+
+        {/* Platform */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground" data-testid="nav-group-platform">
+            Platform
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={location === "/connectors"}
+                  data-testid="nav-connectors"
+                  onClick={() => navigate("/connectors")}
+                  className="cursor-pointer"
+                >
+                  <Plug className="w-4 h-4 opacity-60" />
+                  <span className="text-sm">Connectors</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="px-4 pb-4">

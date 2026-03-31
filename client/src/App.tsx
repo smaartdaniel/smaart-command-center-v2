@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import Dashboard from "@/pages/dashboard";
 import SegmentDetail from "@/pages/segment-detail";
 import CreativePlaybook from "@/pages/creative-playbook";
+import Connectors from "@/pages/connectors";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
 import { useState, useEffect, createContext, useContext } from "react";
@@ -61,6 +62,7 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/connectors" component={Connectors} />
       <Route path="/segment/creative-playbook" component={CreativePlaybook} />
       <Route path="/segment/:slug" component={SegmentDetail} />
       <Route component={NotFound} />
