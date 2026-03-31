@@ -1,7 +1,7 @@
 import * as bcrypt from "bcryptjs";
 import { storage } from "./storage";
-import { SEGMENTS } from "../../server/seed-data";
-import { SEGMENT_TOOLS, SEGMENT_BUDGET_CONFIGS } from "../../server/seed-tools-budget";
+import { SEGMENTS } from "./seed-data";
+import { SEGMENT_TOOLS, SEGMENT_BUDGET_CONFIGS } from "./seed-tools-budget";
 
 export async function seedDatabase(): Promise<void> {
   const existing = await storage.getSegments();

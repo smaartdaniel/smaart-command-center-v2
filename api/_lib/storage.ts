@@ -6,7 +6,7 @@ import {
   type SegmentTool, type InsertSegmentTool, segmentTools,
   type CreativeScore, type InsertCreativeScore, creativeScores,
   type User, type InsertUser, users,
-} from "../../shared/schema";
+} from "./schema";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
 
