@@ -3,3 +3,6 @@ dist
 .env
 *.db
 .vercel
+.env.development.local
+.env*
+!.env.example
