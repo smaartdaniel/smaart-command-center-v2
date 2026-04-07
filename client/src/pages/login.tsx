@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { apiRequest, setToken } from "@/lib/queryClient";
+import { Eye, EyeOff } from "lucide-react";
 
 
-export default function LoginPage({ onLogin }: { onLogin: () => void }) {
+export default function LoginPage({ onLogin, onForgotPassword }: { onLogin: () => void; onForgotPassword?: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +22,6 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
       onLogin();
     } catch (err: any) {
       const msg = err?.message || "Login failed";
-      // Extract the message after the status code prefix if present
       const cleanMsg = msg.includes(": ") ? msg.split(": ").slice(1).join(": ") : msg;
       try {
         const parsed = JSON.parse(cleanMsg);
@@ -74,16 +75,26 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
               <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
-                placeholder="Enter your password"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  className="w-full px-3 py-2 pr-10 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             <button
@@ -93,6 +104,13 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
+            {onForgotPassword && (
+              <div className="text-center">
+                <button type="button" onClick={onForgotPassword} className="text-sm text-muted-foreground hover:underline">
+                  Forgot your password?
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </div>

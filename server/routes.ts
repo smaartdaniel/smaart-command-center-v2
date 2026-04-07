@@ -77,28 +77,26 @@ async function seedUsers() {
   const count = storage.getUserCount();
   if (count > 0) return;
 
-  const hashedPassword = await bcrypt.hash("SmaartAdmin2026!", 10);
+  const { generateDefaultPassword, hashPassword } = await import("@shared/password-utils");
 
-  storage.createUser({
-    email: "daniel@smaartcompany.com",
-    password: hashedPassword,
-    name: "Daniel",
-    role: "admin",
-  });
+  const accounts = [
+    { email: "daniel@smaartcompany.com", name: "Daniel", role: "admin" },
+    { email: "ray@smaartcompany.com", name: "Ray", role: "admin" },
+    { email: "gus@smaartcompany.com", name: "Gus", role: "member" },
+  ];
 
-  storage.createUser({
-    email: "ray@smaartcompany.com",
-    password: hashedPassword,
-    name: "Ray",
-    role: "admin",
-  });
-
-  storage.createUser({
-    email: "gus@smaartcompany.com",
-    password: hashedPassword,
-    name: "Gus",
-    role: "member",
-  });
+  for (const account of accounts) {
+    const defaultPw = generateDefaultPassword(account.name);
+    const hashed = await hashPassword(defaultPw);
+    storage.createUser({
+      email: account.email,
+      password: hashed,
+      name: account.name,
+      role: account.role,
+      mustChangePassword: "true",
+    });
+    console.log(`  Seeded: ${account.email} (default password: ${defaultPw})`);
+  }
 }
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -219,10 +217,123 @@ export async function registerRoutes(
     res.status(201).json(safeUser);
   });
 
+  // --- Change password (requires auth) ---
+  app.post("/api/auth/change-password", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Current and new password are required" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: "New password must be at least 8 characters" });
+    }
+    const user = storage.getUserById(req.session.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) return res.status(403).json({ message: "Current password is incorrect" });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    storage.updateUserPassword(user.id, hashed, "false");
+    res.json({ message: "Password updated successfully" });
+  });
+
+  // --- Forgot password ---
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const { email } = req.body;
+    const successMsg = { message: "If an account with that email exists, a password reset link has been sent." };
+    if (!email) return res.json(successMsg);
+
+    try {
+      const user = storage.getUserByEmail(email);
+      if (!user) return res.json(successMsg);
+
+      const { randomBytes } = await import("crypto");
+      const token = randomBytes(32).toString("hex");
+      const tokenHash = await bcrypt.hash(token, 10);
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      storage.createPasswordResetToken(user.id, tokenHash, expiresAt);
+
+      // Send email via Resend if configured
+      if (process.env.RESEND_API_KEY) {
+        const { Resend } = await import("resend");
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const appUrl = process.env.APP_URL || "http://localhost:5000";
+        const resetUrl = `${appUrl}/#/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
+        await resend.emails.send({
+          from: process.env.EMAIL_FROM || "SMAART Command Center <noreply@smaartcompany.com>",
+          to: email,
+          subject: "Reset your SMAART Command Center password",
+          html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:480px;margin:0 auto;padding:40px 20px;"><h2 style="color:#0f172a;">Password Reset Request</h2><p style="color:#475569;line-height:1.6;">Click the button below to reset your password for SMAART Command Center.</p><a href="${resetUrl}" style="display:inline-block;background:#0f172a;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;margin:24px 0;font-weight:500;">Reset Password</a><p style="color:#94a3b8;font-size:14px;">This link expires in 1 hour.</p></div>`,
+        });
+      }
+    } catch (err) {
+      console.error("Forgot password error:", err);
+    }
+    res.json(successMsg);
+  });
+
+  // --- Reset password ---
+  app.post("/api/auth/reset-password", async (req, res) => {
+    const { token, email, newPassword } = req.body;
+    if (!token || !email || !newPassword) {
+      return res.status(400).json({ message: "Token, email, and new password are required" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters" });
+    }
+    const user = storage.getUserByEmail(email);
+    if (!user) return res.status(400).json({ message: "Invalid or expired reset link" });
+
+    const tokens = storage.getValidResetTokens(user.id);
+    let validTokenId: number | null = null;
+    for (const stored of tokens) {
+      const isMatch = await bcrypt.compare(token, stored.tokenHash);
+      if (isMatch) { validTokenId = stored.id; break; }
+    }
+    if (!validTokenId) return res.status(400).json({ message: "Invalid or expired reset link" });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    storage.updateUserPassword(user.id, hashed, "false");
+    storage.markTokenUsed(validTokenId);
+    res.json({ message: "Password has been reset successfully" });
+  });
+
+  // --- Admin: list users ---
+  app.get("/api/admin/users", (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+    const currentUser = storage.getUserById(req.session.userId);
+    if (!currentUser || currentUser.role !== "admin") return res.status(403).json({ message: "Forbidden" });
+
+    const allUsers = storage.getAllUsers().map(({ password: _pw, ...u }) => u);
+    res.json(allUsers);
+  });
+
+  // --- Admin: reset user password ---
+  app.post("/api/admin/users/:id/reset-password", async (req, res) => {
+    if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+    const currentUser = storage.getUserById(req.session.userId);
+    if (!currentUser || currentUser.role !== "admin") return res.status(403).json({ message: "Forbidden" });
+
+    const targetId = parseInt(req.params.id);
+    const target = storage.getUserById(targetId);
+    if (!target) return res.status(404).json({ message: "User not found" });
+
+    const { generateDefaultPassword, hashPassword } = await import("@shared/password-utils");
+    const firstName = target.name.split(" ")[0];
+    const defaultPassword = generateDefaultPassword(firstName);
+    const hashed = await hashPassword(defaultPassword);
+    storage.updateUserPassword(target.id, hashed, "true");
+
+    res.json({ message: "Password has been reset", defaultPassword });
+  });
+
   // --- Auth middleware for all other API routes ---
   app.use("/api", (req: Request, res: Response, next: NextFunction) => {
     // Allow auth routes to pass through (already handled above)
-    if (req.path.startsWith("/auth/")) {
+    if (req.path.startsWith("/auth/") || req.path.startsWith("/admin/")) {
       return next();
     }
     return requireAuth(req, res, next);

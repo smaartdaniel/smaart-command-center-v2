@@ -16,7 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   LayoutDashboard, Database, Smartphone, MapPin, Layout, Tv, Search,
   BookOpen, Handshake, Mail, Activity, BarChart3, Paintbrush, Crosshair,
-  ChevronDown, Twitter, ExternalLink, LogOut, Plug,
+  ChevronDown, Twitter, ExternalLink, LogOut, Plug, Settings, Users,
 } from "lucide-react";
 import type { Segment } from "@shared/schema";
 import { useAuth } from "@/App";
@@ -185,19 +185,39 @@ export function AppSidebar() {
 
       <SidebarFooter className="px-4 pb-4">
         {user && (
-          <div className="mb-3 flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
-              <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
+          <div className="mb-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
+              </div>
             </div>
-            <button
-              onClick={() => logout()}
-              className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              title="Sign Out"
-              data-testid="button-sign-out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              {user.role === "admin" && (
+                <button
+                  onClick={() => navigate("/admin/users")}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  title="User Management"
+                >
+                  <Users className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={() => navigate("/settings")}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => logout()}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                title="Sign Out"
+                data-testid="button-sign-out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
         <div className="flex items-center justify-between text-[10px] text-muted-foreground">

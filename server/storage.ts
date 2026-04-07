@@ -6,6 +6,7 @@ import {
   type SegmentTool, type InsertSegmentTool, segmentTools,
   type CreativeScore, type InsertCreativeScore, creativeScores,
   type User, type InsertUser, users,
+  passwordResetTokens,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -87,9 +88,25 @@ sqlite.exec(`
     password TEXT NOT NULL,
     name TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'member',
+    must_change_password TEXT DEFAULT 'false',
+    created_at TEXT
+  );
+  CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token_hash TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used_at TEXT,
     created_at TEXT
   );
 `);
+
+// Add must_change_password column to existing databases
+try {
+  sqlite.exec(`ALTER TABLE users ADD COLUMN must_change_password TEXT DEFAULT 'false'`);
+} catch {
+  // Column already exists
+}
 
 export const db = drizzle(sqlite);
 
@@ -139,6 +156,13 @@ export interface IStorage {
   getUserByEmail(email: string): User | undefined;
   getUserById(id: number): User | undefined;
   getUserCount(): number;
+  getAllUsers(): User[];
+  updateUserPassword(id: number, passwordHash: string, mustChangePassword: string): void;
+
+  // Password Reset Tokens
+  createPasswordResetToken(userId: number, tokenHash: string, expiresAt: string): void;
+  getValidResetTokens(userId: number): { id: number; tokenHash: string }[];
+  markTokenUsed(tokenId: number): void;
 
   // Seed
   insertSegment(s: InsertSegment): Segment;
@@ -270,6 +294,42 @@ export class DatabaseStorage implements IStorage {
   getUserCount(): number {
     const result = db.select({ count: sql<number>`count(*)` }).from(users).get();
     return result?.count ?? 0;
+  }
+
+  getAllUsers(): User[] {
+    return db.select().from(users).all();
+  }
+
+  updateUserPassword(id: number, passwordHash: string, mustChangePassword: string): void {
+    db.update(users).set({ password: passwordHash, mustChangePassword }).where(eq(users.id, id)).run();
+  }
+
+  createPasswordResetToken(userId: number, tokenHash: string, expiresAt: string): void {
+    db.insert(passwordResetTokens).values({
+      userId,
+      tokenHash,
+      expiresAt,
+      createdAt: new Date().toISOString(),
+    } as any).run();
+  }
+
+  getValidResetTokens(userId: number): { id: number; tokenHash: string }[] {
+    const now = new Date().toISOString();
+    return db
+      .select({ id: passwordResetTokens.id, tokenHash: passwordResetTokens.tokenHash })
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.userId, userId),
+          sql`${passwordResetTokens.usedAt} IS NULL`,
+          sql`${passwordResetTokens.expiresAt} > ${now}`,
+        )
+      )
+      .all();
+  }
+
+  markTokenUsed(tokenId: number): void {
+    db.update(passwordResetTokens).set({ usedAt: new Date().toISOString() }).where(eq(passwordResetTokens.id, tokenId)).run();
   }
 }
 

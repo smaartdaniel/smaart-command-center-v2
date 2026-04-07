@@ -9,9 +9,10 @@ import {
   type Website, type InsertWebsite, websites,
   type Connector, type InsertConnector, connectors,
   type ConnectorLog, type InsertConnectorLog, connectorLogs,
+  passwordResetTokens,
 } from "./schema";
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 
 export interface IStorage {
   // Segments
@@ -59,6 +60,13 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: number): Promise<User | undefined>;
   getUserCount(): Promise<number>;
+  getAllUsers(): Promise<User[]>;
+  updateUserPassword(id: number, passwordHash: string, mustChangePassword: string): Promise<void>;
+
+  // Password Reset Tokens
+  createPasswordResetToken(userId: number, tokenHash: string, expiresAt: string): Promise<void>;
+  getValidResetTokens(userId: number): Promise<{ id: number; tokenHash: string }[]>;
+  markTokenUsed(tokenId: number): Promise<void>;
 
   // Seed
   insertSegment(s: InsertSegment): Promise<Segment>;
@@ -210,6 +218,41 @@ export class DatabaseStorage implements IStorage {
   async getUserCount(): Promise<number> {
     const result = await db.select({ count: sql<number>`count(*)` }).from(users).then(r => r[0]);
     return result?.count ?? 0;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async updateUserPassword(id: number, passwordHash: string, mustChangePassword: string): Promise<void> {
+    await db.update(users).set({ password: passwordHash, mustChangePassword }).where(eq(users.id, id));
+  }
+
+  async createPasswordResetToken(userId: number, tokenHash: string, expiresAt: string): Promise<void> {
+    await db.insert(passwordResetTokens).values({
+      userId,
+      tokenHash,
+      expiresAt,
+      createdAt: new Date().toISOString(),
+    } as any);
+  }
+
+  async getValidResetTokens(userId: number): Promise<{ id: number; tokenHash: string }[]> {
+    const now = new Date().toISOString();
+    return await db
+      .select({ id: passwordResetTokens.id, tokenHash: passwordResetTokens.tokenHash })
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.userId, userId),
+          sql`${passwordResetTokens.usedAt} IS NULL`,
+          sql`${passwordResetTokens.expiresAt} > ${now}`,
+        )
+      );
+  }
+
+  async markTokenUsed(tokenId: number): Promise<void> {
+    await db.update(passwordResetTokens).set({ usedAt: new Date().toISOString() }).where(eq(passwordResetTokens.id, tokenId));
   }
 
   // Websites

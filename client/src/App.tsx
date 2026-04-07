@@ -10,8 +10,12 @@ import Dashboard from "@/pages/dashboard";
 import SegmentDetail from "@/pages/segment-detail";
 import CreativePlaybook from "@/pages/creative-playbook";
 import Connectors from "@/pages/connectors";
+import Settings from "@/pages/settings";
+import AdminUsers from "@/pages/admin-users";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
+import ForgotPasswordPage from "@/pages/forgot-password";
+import ResetPasswordPage from "@/pages/reset-password";
 import { useState, useEffect, createContext, useContext } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +25,7 @@ export interface AuthUser {
   email: string;
   name: string;
   role: string;
+  mustChangePassword: string | null;
   createdAt: string | null;
 }
 
@@ -63,10 +68,29 @@ function AppRouter() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/connectors" component={Connectors} />
+      <Route path="/settings" component={Settings} />
+      <Route path="/admin/users" component={AdminUsers} />
       <Route path="/segment/creative-playbook" component={CreativePlaybook} />
       <Route path="/segment/:slug" component={SegmentDetail} />
       <Route component={NotFound} />
     </Switch>
+  );
+}
+
+function ForceChangePasswordApp({ user, logout }: { user: AuthUser; logout: () => Promise<void> }) {
+  return (
+    <AuthContext.Provider value={{ user, logout }}>
+      <div className="min-h-screen bg-background">
+        <div className="max-w-lg mx-auto py-8 px-4">
+          <div className="mb-6 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <p className="text-sm font-medium text-amber-400">
+              You must change your password before continuing. Please set a new password below.
+            </p>
+          </div>
+          <Settings />
+        </div>
+      </div>
+    </AuthContext.Provider>
   );
 }
 
@@ -100,6 +124,14 @@ function AuthenticatedApp({ user, logout }: { user: AuthUser; logout: () => Prom
 
 function App() {
   const token = getToken();
+  const [authView, setAuthView] = useState<"login" | "forgot" | "reset">("login");
+
+  // Detect reset-password hash route on mount
+  useEffect(() => {
+    if (window.location.hash.startsWith("#/reset-password")) {
+      setAuthView("reset");
+    }
+  }, []);
 
   const { data: user, isLoading, refetch } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/me"],
@@ -131,6 +163,11 @@ function App() {
     refetch();
   };
 
+  const backToLogin = () => {
+    setAuthView("login");
+    window.location.hash = "/";
+  };
+
   if (token && isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -139,8 +176,20 @@ function App() {
     );
   }
 
+  // Show forgot/reset pages even when not authenticated
   if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
+    if (authView === "forgot") {
+      return <ForgotPasswordPage onBack={backToLogin} />;
+    }
+    if (authView === "reset") {
+      return <ResetPasswordPage onBack={backToLogin} />;
+    }
+    return <LoginPage onLogin={handleLogin} onForgotPassword={() => setAuthView("forgot")} />;
+  }
+
+  // Force password change if needed
+  if (user.mustChangePassword === "true") {
+    return <ForceChangePasswordApp user={user} logout={handleLogout} />;
   }
 
   return <AuthenticatedApp user={user} logout={handleLogout} />;
